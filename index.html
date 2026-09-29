@@ -59,7 +59,12 @@ body{background:#050b14!important;color:#eef6ff!important;font-family:Inter,Aria
 </div>
 </div></section>
 <section class="section order" id="order"><div class="wrap"><div class="head"><span class="badge">CASH ON DELIVERY</span><h2 style="margin-top:14px">Get Your Cordless Pressure Washer</h2><p class="muted">Cash on Delivery • All Pakistan Delivery • Easy Ordering</p></div><div class="orderbox"><form id="orderForm" onsubmit="submitOrder(event)">
-<label>Full Name *</label><input placeholder="Enter your full name" required=""/><label>Mobile Number *</label><input placeholder="03XXXXXXXXX" required="" type="tel"/><label>Complete Address *</label><textarea placeholder="House number, street, area" required=""></textarea><label>City *</label><input placeholder="Enter your city" required=""/><label>Quantity</label><select><option>1</option><option>2</option><option>3</option></select><button class="btn" type="submit">🛒 Confirm Order</button></form></div></div></section>
+<label>Full Name *</label><input name="name" placeholder="Enter your full name" required/>
+<label>Mobile Number *</label><input name="phone" placeholder="03XXXXXXXXX" required type="tel"/>
+<label>Complete Address *</label><textarea name="address" placeholder="House number, street, area" required></textarea>
+<label>City *</label><input name="city" placeholder="Enter your city" required/>
+<label>Quantity</label><select name="quantity"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+<button class="btn" id="submitBtn" type="submit">🛒 Confirm Order</button></form></div></div></section>
 <section class="section" id="features"><div class="wrap"><div class="head"><h2>Powerful &amp; Practical</h2><p class="muted">Everything you need for convenient everyday cleaning.</p></div><div class="cards">
 <div class="card"><div class="icon">🔋</div><h3>5000 mAh</h3><p class="muted">Rechargeable cordless battery setup.</p></div>
 <div class="card"><div class="icon">💧</div><h3>Strong Spray</h3><p class="muted">Focused water spray for cleaning tasks.</p></div>
@@ -79,13 +84,59 @@ body{background:#050b14!important;color:#eef6ff!important;font-family:Inter,Aria
 </section>
 <footer>© 2026 POWERWASH • Cordless Pressure Washer</footer>
 <script>
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxh3BRhv4MOQWOljwh973C0wCB27TYBLXbBtuTMchi6NShNt_9iPFeStVEndawFN67P/exec";
+
 function submitOrder(e){
   e.preventDefault();
+
   const form=e.target;
+  const btn=document.getElementById("submitBtn");
   const data=new FormData(form);
-  const name=(data.get('name')||data.get('fullName')||'Customer').toString().trim();
+
+  const payload=new URLSearchParams();
+  payload.append("date",new Date().toLocaleString());
+  payload.append("name",data.get("name")||"");
+  payload.append("phone",data.get("phone")||"");
+  payload.append("address",data.get("address")||"");
+  payload.append("city",data.get("city")||"");
+  payload.append("quantity",data.get("quantity")||"1");
+  payload.append("product","Cordless Pressure Washer");
+
+  // Send in the background so the customer does not wait for Google Apps Script.
+  const blob=new Blob([payload.toString()],{
+    type:"application/x-www-form-urlencoded;charset=UTF-8"
+  });
+
+  try{
+    if(navigator.sendBeacon){
+      navigator.sendBeacon(GOOGLE_SHEET_URL,blob);
+    }else{
+      fetch(GOOGLE_SHEET_URL,{
+        method:"POST",
+        mode:"no-cors",
+        headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+        body:payload.toString(),
+        keepalive:true
+      }).catch(()=>{});
+    }
+  }catch(err){
+    fetch(GOOGLE_SHEET_URL,{
+      method:"POST",
+      mode:"no-cors",
+      headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+      body:payload.toString(),
+      keepalive:true
+    }).catch(()=>{});
+  }
+
+  // Show confirmation immediately.
+  btn.disabled=true;
+  btn.textContent="Order Submitted ✓";
   form.reset();
-  document.querySelectorAll('body > *').forEach(el=>{ if(el.tagName!=='SCRIPT' && el.id!=='thankyou' && el.id!=='top') el.style.display='none'; });
+
+  document.querySelectorAll('body > *').forEach(el=>{
+    if(el.tagName!=='SCRIPT' && el.id!=='thankyou' && el.id!=='top') el.style.display='none';
+  });
   document.getElementById('thankyou').style.display='flex';
   window.scrollTo({top:0,behavior:'smooth'});
 }
