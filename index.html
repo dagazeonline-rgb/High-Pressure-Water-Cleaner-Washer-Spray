@@ -86,11 +86,13 @@ body{background:#050b14!important;color:#eef6ff!important;font-family:Inter,Aria
 <script>
 const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxh3BRhv4MOQWOljwh973C0wCB27TYBLXbBtuTMchi6NShNt_9iPFeStVEndawFN67P/exec";
 
-async function submitOrder(e){
+function submitOrder(e){
   e.preventDefault();
+
   const form=e.target;
   const btn=document.getElementById("submitBtn");
   const data=new FormData(form);
+
   const payload=new URLSearchParams();
   payload.append("date",new Date().toLocaleString());
   payload.append("name",data.get("name")||"");
@@ -99,26 +101,44 @@ async function submitOrder(e){
   payload.append("city",data.get("city")||"");
   payload.append("quantity",data.get("quantity")||"1");
   payload.append("product","Cordless Pressure Washer");
-  btn.disabled=true;
-  btn.textContent="Submitting Order...";
+
+  // Send in the background so the customer does not wait for Google Apps Script.
+  const blob=new Blob([payload.toString()],{
+    type:"application/x-www-form-urlencoded;charset=UTF-8"
+  });
+
   try{
-    await fetch(GOOGLE_SHEET_URL,{
+    if(navigator.sendBeacon){
+      navigator.sendBeacon(GOOGLE_SHEET_URL,blob);
+    }else{
+      fetch(GOOGLE_SHEET_URL,{
+        method:"POST",
+        mode:"no-cors",
+        headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
+        body:payload.toString(),
+        keepalive:true
+      }).catch(()=>{});
+    }
+  }catch(err){
+    fetch(GOOGLE_SHEET_URL,{
       method:"POST",
       mode:"no-cors",
       headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},
-      body:payload.toString()
-    });
-    form.reset();
-    document.querySelectorAll('body > *').forEach(el=>{
-      if(el.tagName!=='SCRIPT' && el.id!=='thankyou' && el.id!=='top') el.style.display='none';
-    });
-    document.getElementById('thankyou').style.display='flex';
-    window.scrollTo({top:0,behavior:'smooth'});
-  }catch(err){
-    btn.disabled=false;
-    btn.textContent="🛒 Confirm Order";
-    alert("Order submit nahi ho saka. Please dobara try karein.");
+      body:payload.toString(),
+      keepalive:true
+    }).catch(()=>{});
   }
+
+  // Show confirmation immediately.
+  btn.disabled=true;
+  btn.textContent="Order Submitted ✓";
+  form.reset();
+
+  document.querySelectorAll('body > *').forEach(el=>{
+    if(el.tagName!=='SCRIPT' && el.id!=='thankyou' && el.id!=='top') el.style.display='none';
+  });
+  document.getElementById('thankyou').style.display='flex';
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 function showHome(e){
   e.preventDefault();
